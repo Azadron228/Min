@@ -1,0 +1,9 @@
+{
+    "name": "aza/min",
+    "autoload": {
+        "psr-4": {
+            "Min\\": "src/",
+        }
+    },
+    "require": {}
+}
