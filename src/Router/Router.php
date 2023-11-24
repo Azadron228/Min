@@ -18,6 +18,18 @@ class Router
     {
         return $this->addRoute('POST', $path, $callback);
     }
+    public function put($path, $callback)
+    {
+        return $this->addRoute('PUT', $path, $callback);
+    }
+    public function patch($path, $callback)
+    {
+        return $this->addRoute('PATCH', $path, $callback);
+    }
+    public function delete($path, $callback)
+    {
+        return $this->addRoute('DELETE', $path, $callback);
+    }
 
     public function addRoute($method, $path, $callback)
     {
