@@ -1,58 +1,57 @@
-
 <?php
 
 namespace Min\Router;
 
-use Min\Middleware\MiddlewareInterface;
+use Closure;
 
 class Router
 {
   private array $routes = [];
   protected array $middlewares = [];
-
-  public function __construct(
-    protected RouterInterface $router,
-    protected bool $detectDuplicates = true
-  ) {
-  }
+  protected $router;
 
   public function route(
     string $path,
-    MiddlewareInterface $middleware,
-    string $method = null
+    string $method,
+    string|array|Closure $callable,
+    array $middleware = []
   ): Route {
-    $route = new Route($path, $middleware[], $method);
+    $route = new Route($path, $method, $callable, $middleware);
     $this->routes[] = $route;
-    $this->router->addRoute($route);
 
     return $route;
   }
 
-
-  public function middleware(array $middleware): self
+  public function middleware(array $middleware): void
   {
-    $this->middlewares[] = $middleware;
-    return $this;
+    echo "HUIUHIUHUHI";
+    $this->middlewares = array_merge($this->middlewares, $middleware);
+    var_dump($this->middlewares);
   }
 
-  public function get(string $path, $middleware): Route
+  public function get(string $path, string|array|Closure $callable): Route
   {
-    return $this->route($path, $middleware, 'GET');
+    return $this->route($path, 'GET', $callable, $this->middlewares);
   }
 
-  public function post(string $path, MiddlewareInterface $middleware): Route
+  public function post(string $path, string|array|Closure $callable): Route
   {
-    return $this->route($path, $middleware, 'POST');
+    return $this->route($path, 'POST', $callable, $this->middlewares);
   }
 
-  public function put(string $path, MiddlewareInterface $middleware): Route
+  public function put(string $path, string|array|Closure $callable): Route
   {
-    return $this->route($path, $middleware, 'PUT');
+    return $this->route($path, 'PUT', $callable, $this->middlewares);
   }
 
-  public function delete(string $path, MiddlewareInterface $middleware): Route
+  public function delete(string $path, string|array|Closure $callable): Route
   {
-    return $this->route($path, $middleware, 'DELETE');
+    return $this->route($path, 'DELETE', $callable, $this->middlewares);
+  }
+
+  public function patch(string $path, string|array|Closure $callable): Route
+  {
+    return $this->route($path, 'PATCH', $callable, $this->middlewares);
   }
 
   public function dispatch()
@@ -70,15 +69,25 @@ class Router
     }
   }
 
-  protected function findMatchingRoute(string $path, string $method): ?Route
+  public function findMatchingRoute(string $path, string $method): ?Route
   {
     foreach ($this->routes as $route) {
-      if ($route->matches($path, $method)) {
+      var_dump($route);
         return $route;
-      }
     }
 
     return null;
+  }
+
+  public function matches(string $requestPath, string $requestMethod): bool
+  {
+    var_dump($requestMethod);
+    var_dump($this->method);
+    // Compare request method
+    if ($requestPath !== $requestMethod) {
+      return false;
+    }
+
   }
 
   protected function executeMiddleware(Route $route)
@@ -92,7 +101,6 @@ class Router
     foreach ($route->getMiddleware() as $middleware) {
       $middleware->handle();
     }
-
-    $route->handle();
   }
 }
+
