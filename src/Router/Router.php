@@ -1,106 +1,98 @@
+
 <?php
 
 namespace Min\Router;
 
-use Min\Http\Request;
-use Min\Middleware\MiddlewareHandler;
+use Min\Middleware\MiddlewareInterface;
 
 class Router
 {
-    private $routes = [];
+  private array $routes = [];
+  protected array $middlewares = [];
 
-    public function get($path, $callback)
-    {
-        return $this->addRoute('GET', $path, $callback);
+  public function __construct(
+    protected RouterInterface $router,
+    protected bool $detectDuplicates = true
+  ) {
+  }
+
+  public function route(
+    string $path,
+    MiddlewareInterface $middleware,
+    string $method = null
+  ): Route {
+    $route = new Route($path, $middleware[], $method);
+    $this->routes[] = $route;
+    $this->router->addRoute($route);
+
+    return $route;
+  }
+
+
+  public function middleware(array $middleware): self
+  {
+    $this->middlewares[] = $middleware;
+    return $this;
+  }
+
+  public function get(string $path, $middleware): Route
+  {
+    return $this->route($path, $middleware, 'GET');
+  }
+
+  public function post(string $path, MiddlewareInterface $middleware): Route
+  {
+    return $this->route($path, $middleware, 'POST');
+  }
+
+  public function put(string $path, MiddlewareInterface $middleware): Route
+  {
+    return $this->route($path, $middleware, 'PUT');
+  }
+
+  public function delete(string $path, MiddlewareInterface $middleware): Route
+  {
+    return $this->route($path, $middleware, 'DELETE');
+  }
+
+  public function dispatch()
+  {
+    $path = $_SERVER['REQUEST_URI'];
+    $method = $_SERVER["REQUEST_METHOD"];
+
+    // Find the matching route based on the request path and method
+    $matchedRoute = $this->findMatchingRoute($path, $method);
+
+    if ($matchedRoute) {
+      $this->executeMiddleware($matchedRoute);
+    } else {
+      echo "404";
+    }
+  }
+
+  protected function findMatchingRoute(string $path, string $method): ?Route
+  {
+    foreach ($this->routes as $route) {
+      if ($route->matches($path, $method)) {
+        return $route;
+      }
     }
 
-    public function post($path, $callback)
-    {
-        return $this->addRoute('POST', $path, $callback);
-    }
-    public function put($path, $callback)
-    {
-        return $this->addRoute('PUT', $path, $callback);
-    }
-    public function patch($path, $callback)
-    {
-        return $this->addRoute('PATCH', $path, $callback);
-    }
-    public function delete($path, $callback)
-    {
-        return $this->addRoute('DELETE', $path, $callback);
+    return null;
+  }
+
+  protected function executeMiddleware(Route $route)
+  {
+    // Execute global middlewares
+    foreach ($this->middlewares as $middleware) {
+      $middleware->handle();
     }
 
-    public function addRoute($method, $path, $callback)
-    {
-        $this->routes[] = [
-            'method' => $method,
-            'path' => $path,
-            'callback' => $callback,
-            'middleware' => [],
-        ];
-
-        return $this;
+    // Execute middlewares specific to the matched route
+    foreach ($route->getMiddleware() as $middleware) {
+      $middleware->handle();
     }
 
-    public function middleware($middlewareClass)
-    {
-        MiddlewareHandler::handle($middlewareClass);
-        $this->getLastRoute()['middleware'][] = $middlewareClass;
-        return $this;
-    }
-
-    public function handleRequest()
-    {
-        $method = Request::method();
-        $uri = Request::uri();
-
-        foreach ($this->routes as $route) {
-            if ($this->isMatchingRoute($route, $method, $uri)) {
-                foreach ($route['middleware'] as $middlewareClass) {
-                    MiddlewareHandler::handle($middlewareClass);
-                }
-
-                $params = $this->extractParams($route['path'], $uri);
-
-                if (is_callable($route['callback'])) {
-                    call_user_func_array($route['callback'], $params);
-                } else {
-                    list($controllerClassName, $methodName) = $route['callback'];
-                    $controller = new $controllerClassName();
-                    call_user_func_array([$controller, $methodName], $params);
-                }
-
-                return;
-            }
-        }
-        echo '404 Not Found';
-    }
-
-    private function isMatchingRoute($route, $method, $uri)
-    {
-        $pattern = str_replace('/', '\/', $route['path']);
-        $pattern = preg_replace('/\{([a-zA-Z0-9]+)\}/', '([a-zA-Z0-9]+)', $pattern);
-
-        return preg_match("/^{$pattern}$/", $uri) && $route['method'] == $method;
-    }
-
-    private function extractParams($pattern, $uri)
-    {
-        preg_match_all('/\{([a-zA-Z0-9]+)\}/', $pattern, $matches);
-        $paramNames = $matches[1];
-
-        $pattern = str_replace('/', '\/', $pattern);
-        $pattern = preg_replace('/\{([a-zA-Z0-9]+)\}/', '([a-zA-Z0-9]+)', $pattern);
-
-        preg_match("/^{$pattern}$/", $uri, $values);
-        array_shift($values);
-
-        return array_combine($paramNames, $values);
-    }
-
-    private function getLastRoute()
-    {
-        return end($this->routes);
-    }
+    $route->handle();
+  }
 }

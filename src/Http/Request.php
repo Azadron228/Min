@@ -2,27 +2,64 @@
 
 namespace Min\Http;
 
+
+use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
+use Symfony\Component\HttpFoundation\Session\Session;
+
 class Request
 {
-    public static function method()
+    private SymfonyRequest $request;
+
+    public function __construct()
     {
-        return $_SERVER['REQUEST_METHOD'];
+        $this->request = SymfonyRequest::createFromGlobals();
     }
 
-    public static function uri()
+    /**
+     * Undocumented function
+     *
+     * @return string
+     */
+    public function method(): string
     {
-        return $_SERVER['REQUEST_URI'];
+        return $this->request->getMethod();
     }
 
-    public static function json()
+    public function json(): array
     {
-        $json = file_get_contents('php://input');
-        return json_decode($json, true);
+        return $this->request->toArray();
     }
 
-    public static function getallheaders()
+    public function content()
     {
-        $headers = getallheaders();
-        return $headers;
+        return $this->request->getContent();
+    }
+
+    public function cookie(string $key = null): mixed
+    {
+        if ($key) {
+            return $this->request->cookies->get($key);
+        }
+
+        return $this->request->cookies->all();
+    }
+
+    public function session(): mixed
+    {
+        return new Session();
+    }
+
+    public function header(string $key = null): mixed
+    {
+        if ($key) {
+            return $this->request->headers->get($key);
+        }
+
+        return $this->request->headers->all();
+    }
+
+    public function isMethod(string $method): bool
+    {
+        return $this->request->isMethod($method);
     }
 }

@@ -2,73 +2,38 @@
 
 namespace Min\Database;
 
-use Exception;
-use PDO;
-use PDOException;
+use Min\Database\Drivers\Mysql;
+use Min\Database\Drivers\Sqlite;
 
 class Database
 {
-    private $pdo;
+    private $connection;
 
-    public function __construct()
+    public function connect($config)
     {
-        $this->loadEnv();
-        $this->connect();
+        $driver = $config['driver'];
+
+        switch ($driver) {
+            case 'mysql':
+                $this->connection = new Mysql($config);
+                break;
+            case 'sqlite':
+                $this->connection = new Sqlite($config);
+                break;
+            default:
+                throw new Exception("Unsupported database driver: $driver");
+        }
+
+        $this->connection->connect();
     }
 
-    private function loadEnv()
+    public function getConnection()
     {
-        $envFile = '/home/aza/MinProject/app/.env';
-
-        if (!file_exists($envFile)) {
-            throw new Exception('.env file not found.');
-        }
-
-        $env = parse_ini_file($envFile);
-
-        if ($env === false) {
-            throw new Exception('Error parsing .env file.');
-        }
-
-        foreach ($env as $key => $value) {
-            putenv("$key=$value");
-        }
+        return $this->connection;
     }
 
-    public function connect()
+    public function query($sql)
     {
-        $driver = getenv('DB_DRIVER');
-        $host = getenv('DB_HOST');
-        $database = getenv('DB_DATABASE');
-        $username = getenv('DB_USERNAME');
-        $password = getenv('DB_PASSWORD');
-
-        try {
-            if ($driver === 'mysql') {
-                $this->pdo = new PDO("mysql:host=$host;dbname=$database", $username, $password);
-            } elseif ($driver === 'sqlite') {
-                if (!file_exists($database)) {
-                    touch($database);
-                }
-                $this->pdo = new PDO("sqlite:$database");
-            } else {
-                throw new Exception('Invalid database driver specified in .env');
-            }
-
-            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } catch (PDOException $e) {
-            throw new Exception('Database connection error: ' . $e->getMessage());
-        }
-    }
-
-    public function query($sql, $params = [])
-    {
-        try {
-            $statement = $this->pdo->prepare($sql);
-            $statement->execute($params);
-            return $statement;
-        } catch (PDOException $e) {
-            throw new Exception('Query error: ' . $e->getMessage());
-        }
+        return $this->connection->query($sql);
     }
 }

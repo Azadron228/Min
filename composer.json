@@ -2,8 +2,10 @@
     "name": "aza/min",
     "autoload": {
         "psr-4": {
-            "Min\\": "src/",
+            "Min\\": "src/"
         }
     },
-    "require": {}
+    "require": {
+        "symfony/http-foundation": "^6.3"
+    }
 }
