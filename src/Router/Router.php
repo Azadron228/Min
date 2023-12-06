@@ -3,6 +3,7 @@
 namespace Min\Router;
 
 use Closure;
+use Min\Router\Route;
 
 class Router
 {
@@ -22,16 +23,11 @@ class Router
     return $route;
   }
 
-  public function middleware(array $middleware): void
+  public function get(string $path, string|array|Closure $callable, array $middlewares = null): self
   {
-    echo "HUIUHIUHUHI";
-    $this->middlewares = array_merge($this->middlewares, $middleware);
-    var_dump($this->middlewares);
-  }
-
-  public function get(string $path, string|array|Closure $callable): Route
-  {
-    return $this->route($path, 'GET', $callable, $this->middlewares);
+    $middlewares = $middlewares ?? [];
+    $this->route($path, 'GET', $callable, $middlewares);
+    return $this;
   }
 
   public function post(string $path, string|array|Closure $callable): Route
@@ -69,38 +65,30 @@ class Router
     }
   }
 
+
   public function findMatchingRoute(string $path, string $method): ?Route
   {
     foreach ($this->routes as $route) {
-      var_dump($route);
+      if ($this->matches($route, $path, $method)) {
         return $route;
+      }
     }
 
     return null;
   }
 
-  public function matches(string $requestPath, string $requestMethod): bool
+  public function matches(Route $route, string $requestPath, string $requestMethod): bool
   {
-    var_dump($requestMethod);
-    var_dump($this->method);
-    // Compare request method
-    if ($requestPath !== $requestMethod) {
-      return false;
-    }
-
+    return $route->getPath() === $requestPath && $route->getMethod() === $requestMethod;
   }
 
   protected function executeMiddleware(Route $route)
   {
-    // Execute global middlewares
-    foreach ($this->middlewares as $middleware) {
-      $middleware->handle();
-    }
-
-    // Execute middlewares specific to the matched route
-    foreach ($route->getMiddleware() as $middleware) {
+    var_dump($route);
+    $middlewares = $route->getMiddleware();
+    foreach ($middlewares as $middlewareClass) {
+      $middleware = new $middlewareClass();
       $middleware->handle();
     }
   }
 }
-

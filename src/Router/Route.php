@@ -11,18 +11,25 @@ class Route
   protected string $method;
 
   public function __construct(
-    string $path, 
-    string $method, 
-    string|array|Closure $callable, 
-    array $middleware) {
+    string $path,
+    string $method,
+    string|array|Closure $callable,
+    array $middleware
+  ) {
     $this->path = $path;
     $this->method = $method;
     $this->$callable = $callable;
     $this->middleware = $middleware;
   }
 
-  public function handle()
+  public function getPath(): string
   {
+    return $this->path;
+  }
+
+  public function getMethod(): string
+  {
+    return $this->method;
   }
 
   public function getMiddleware()
